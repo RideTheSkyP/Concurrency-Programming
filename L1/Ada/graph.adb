@@ -5,21 +5,21 @@ use Parameters;
 with Ada.Numerics.Discrete_Random;
 
 package body Graph is 
-    Type Edges_array is array (0 .. ExtraEdgesAmount + 2) of Integer;
+    Type Edges_array is array (0 .. AdditionalEdgesCount + 2) of Integer;
     Type PHistory is array (0..PackagesAmount) of Integer;
     Type VHistory is array (0..VerticesAmount) of Integer;
 
     Type Vertex is record
-            EdgesAmount     : Integer;
             Edges           : Edges_array;
+            EdgesAmount     : Integer;
             PackageId       : Integer := -1;
             PackageAmount   : Integer := -1;
             PackagesHistory : PHistory; 
     End record;
 
     Type Packages is record
-            AmountOfVisitedVertices : Integer := -1;
             VisitedVertices         : VHistory;
+            AmountOfVisitedVertices : Integer := -1;
     End record;
 
     Type VerticesHistory is array (0..VerticesAmount - 1) of Vertex;
@@ -32,11 +32,11 @@ package body Graph is
     
 
     procedure BuildGraph(graph : in out VerticesHistory) is
-        EdgesAmountCounter : Integer := 0;
-        StartEdge   : Integer;
-        FinishEdge  : Integer;
-        Temporary   : Integer;
-        WrongEdge   : Boolean := false;
+        EdgesAmountCounter  : Integer := 0;
+        StartEdge           : Integer;
+        FinishEdge          : Integer;
+        Temporary           : Integer;
+        WrongEdge           : Boolean := false;
     begin
 
         graph(VerticesAmount - 1).EdgesAmount := 0;
@@ -46,7 +46,7 @@ package body Graph is
             graph(I).Edges(0) := I + 1;
         end loop;
 
-        while EdgesAmountCounter < ExtraEdgesAmount loop
+        while EdgesAmountCounter < AdditionalEdgesCount loop
             reset(RandomEdgesGenerator);
             WrongEdge   := false;
             StartEdge   := Random(RandomEdgesGenerator);
@@ -165,8 +165,8 @@ package body Graph is
             end loop;
         end CreateRecipient;
 
-        Task Type VertexController(vertexId : Integer);
-        Task Body VertexController is
+        Task Type VerticesController(vertexId : Integer);
+        Task Body VerticesController is
             currentVertex   : Integer := vertexId;
             nextVertex      : Integer;
         begin
@@ -196,7 +196,7 @@ package body Graph is
                 exit when PacketSent;
                 Reset(DelayGenerator);
             end loop;
-        end VertexController;
+        end VerticesController;
 
         Task Type ExcutionFinished;
         Task Body ExcutionFinished is
@@ -235,14 +235,14 @@ package body Graph is
 
         Sender : access CreateSender;
         Recipient : access CreateRecipient;
-        Controller : array (0..VerticesAmount - 2) of access VertexController;
+        Controller : array (0..VerticesAmount - 2) of access VerticesController;
         PrintResults : access ExcutionFinished;
     begin
         BuildGraph(Vertices);
         Sender := new CreateSender;
         Recipient := new CreateRecipient;
         for I in 0..VerticesAmount - 2 loop
-            Controller(I) := new VertexController(I);
+            Controller(I) := new VerticesController(I);
         end loop;
         PrintResults := new ExcutionFinished;
     end Start;
