@@ -3,6 +3,7 @@ use Ada.Text_IO;
 with Parameters; 
 use Parameters;
 with Ada.Numerics.Discrete_Random;
+with Ada.Numerics.Float_Random;
 
 package body Graph is 
     Type Edges_array is array (0 .. AdditionalEdgesCount + 2) of Integer;
@@ -80,18 +81,22 @@ package body Graph is
             New_Line;
         end loop;
         New_Line;
-    end BuildGraph;    
+    end BuildGraph;
+
+    function GetRandomDelay return Duration is
+        G      : Ada.Numerics.Float_Random.Generator;
+        Result : Float;
+    begin
+        Ada.Numerics.Float_Random.Reset(G);
+        Result := Ada.Numerics.Float_Random.Random(G);
+        return Duration(Result);
+    end GetRandomDelay;
 
 
     procedure Start is
         Vertices    : VerticesHistory;
         Packages    : PackageHistory;
         PacketSent  : Boolean := False;
-
-        subtype RangeOfDelay is Integer range 1..10;
-        package RandomDelay is new Ada.Numerics.Discrete_Random(RangeOfDelay); 
-        use RandomDelay;
-        DelayGenerator : RandomDelay.Generator;
 
         subtype VerticesRange is Positive;
         package RandomVertices is new Ada.Numerics.Discrete_Random(VerticesRange); 
@@ -139,8 +144,7 @@ package body Graph is
 
                 exit when PacketSent;
 
-                Reset(DelayGenerator);
-                delay SenderDelay * Random(DelayGenerator); 
+                delay SenderDelay * GetRandomDelay; 
             end loop;
         end CreateSender;
 
@@ -160,8 +164,7 @@ package body Graph is
                 end if;
                 exit when PacketSent; 
 
-                Reset(DelayGenerator);
-                delay RecipientDelay * Random(DelayGenerator);
+                delay RecipientDelay * GetRandomDelay;
             end loop;
         end CreateRecipient;
 
@@ -171,7 +174,7 @@ package body Graph is
             nextVertex      : Integer;
         begin
             loop
-                delay PackageDelay * Random(DelayGenerator);
+                delay PackageDelay * GetRandomDelay;
                 if Vertices(currentVertex).PackageId /= -1 then 
                     reset(RandomVerticesGenerator);
                     nextVertex := Vertices(currentVertex).Edges(Random(RandomVerticesGenerator) mod Vertices(currentVertex).EdgesAmount);
@@ -188,13 +191,11 @@ package body Graph is
                             PrintPackageFlow.PrintForPackageInVertex(Vertices(nextVertex).PackageId, nextVertex);
                             exit;
                         else
-                            Reset(DelayGenerator);
-                            delay PackageDelay * Random(DelayGenerator);
+                            delay PackageDelay * GetRandomDelay;
                         end if;
                     end loop;    
                 end if;
                 exit when PacketSent;
-                Reset(DelayGenerator);
             end loop;
         end VerticesController;
 
