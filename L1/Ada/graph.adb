@@ -1,87 +1,11 @@
-with Ada.Text_IO; 
-use Ada.Text_IO;  
-with Parameters; 
+with Ada.Text_IO;
+use Ada.Text_IO;
+with Parameters;
 use Parameters;
 with Ada.Numerics.Discrete_Random;
 with Ada.Numerics.Float_Random;
 
-package body Graph is 
-    Type Edges_array is array (0 .. AdditionalEdgesCount + 2) of Integer;
-    Type PHistory is array (0..PackagesAmount) of Integer;
-    Type VHistory is array (0..VerticesAmount) of Integer;
-
-    Type Vertex is record
-            Edges           : Edges_array;
-            EdgesAmount     : Integer;
-            PackageId       : Integer := -1;
-            PackageAmount   : Integer := -1;
-            PackagesHistory : PHistory; 
-    End record;
-
-    Type Packages is record
-            VisitedVertices         : VHistory;
-            AmountOfVisitedVertices : Integer := -1;
-    End record;
-
-    Type VerticesHistory is array (0..VerticesAmount - 1) of Vertex;
-    Type PackageHistory is array (0..PackagesAmount - 1) of Packages;
-    
-    subtype PossibleRangeOfEdges is Integer range 0..VerticesAmount - 1;
-    package GenerateRandomEdges is new Ada.Numerics.Discrete_Random(PossibleRangeOfEdges); 
-    use GenerateRandomEdges;
-    RandomEdgesGenerator : GenerateRandomEdges.Generator;
-    
-
-    procedure BuildGraph(graph : in out VerticesHistory) is
-        EdgesAmountCounter  : Integer := 0;
-        StartEdge           : Integer;
-        FinishEdge          : Integer;
-        Temporary           : Integer;
-        WrongEdge           : Boolean := false;
-    begin
-
-        graph(VerticesAmount - 1).EdgesAmount := 0;
-
-        For I in 0..VerticesAmount-2 loop
-            graph(I).EdgesAmount := 1;
-            graph(I).Edges(0) := I + 1;
-        end loop;
-
-        while EdgesAmountCounter < AdditionalEdgesCount loop
-            reset(RandomEdgesGenerator);
-            WrongEdge   := false;
-            StartEdge   := Random(RandomEdgesGenerator);
-            FinishEdge  := Random(RandomEdgesGenerator);
-
-            If (StartEdge /= FinishEdge) then 
-                If (StartEdge > FinishEdge) then 
-                    Temporary   := StartEdge;
-                    StartEdge   := FinishEdge;
-                    FinishEdge  := Temporary;
-                end if;
-
-                for I in 0..graph(StartEdge).EdgesAmount - 1 loop
-                    if graph(StartEdge).Edges(I) = FinishEdge then 
-                        WrongEdge := true;
-                    end if;  
-                end loop;
-                If not WrongEdge then
-                    graph(StartEdge).Edges(graph(StartEdge).EdgesAmount) := FinishEdge;
-                    graph(StartEdge).EdgesAmount := graph(StartEdge).EdgesAmount + 1;
-                    EdgesAmountCounter := EdgesAmountCounter + 1;
-                end if;
-            end if;
-        end loop;
-
-        For I in 0..VerticesAmount - 1 loop
-            Put("Vertex:" & Integer'Image(I) & ". Connected to edges:");
-            For J in 0..graph(I).EdgesAmount - 1 loop
-                Put(Integer'Image(graph(I).Edges(J)));
-            end loop;
-            New_Line;
-        end loop;
-        New_Line;
-    end BuildGraph;
+package body Graph is
 
     function GetRandomDelay return Duration is
         G      : Ada.Numerics.Float_Random.Generator;
@@ -94,9 +18,39 @@ package body Graph is
 
 
     procedure Start is
-        Vertices    : VerticesHistory;
-        Packages    : PackageHistory;
-        PacketSent  : Boolean := False;
+        Type Edges_array is array (0 .. AdditionalEdgesCount + 2) of Integer;
+        Type PHistory is array (0..PackagesAmount) of Integer;
+        Type VHistory is array (0..VerticesAmount) of Integer;
+
+        Type Vertex is record
+            Edges           : Edges_array;
+            EdgesAmount     : Integer;
+            PackageId       : Integer := -1;
+            PackageAmount   : Integer := -1;
+            PackagesHistory : PHistory; 
+        End record;
+
+        Type Packet is record
+                VisitedVertices         : VHistory;
+                AmountOfVisitedVertices : Integer := -1;
+        End record;
+
+        Type VerticesHistory is array (0..VerticesAmount - 1) of Vertex;
+        Type PackageHistory is array (0..PackagesAmount - 1) of Packet;
+        
+        subtype PossibleRangeOfEdges is Integer range 0..VerticesAmount - 1;
+        package GenerateRandomEdges is new Ada.Numerics.Discrete_Random(PossibleRangeOfEdges); 
+        use GenerateRandomEdges;
+        RandomEdgesGenerator : GenerateRandomEdges.Generator;
+
+        Vertices            : VerticesHistory;
+        Packages            : PackageHistory;
+        PacketIsSent          : Boolean := False;
+        EdgesAmountCounter  : Integer := 0;
+        StartEdge           : Integer;
+        FinishEdge          : Integer;
+        Temporary           : Integer;
+        WrongEdge           : Boolean := false;
 
         subtype VerticesRange is Positive;
         package RandomVertices is new Ada.Numerics.Discrete_Random(VerticesRange); 
@@ -107,6 +61,7 @@ package body Graph is
             entry PrintForPackageInVertex(packageId : in Integer; vertexId : in Integer);
             entry PrintPackageReceived(packageId : in Integer);
         end PrintPackageFlow; 
+
         Task Body PrintPackageFlow is
         begin 
             loop
@@ -120,7 +75,7 @@ package body Graph is
                     end PrintPackageReceived; 
                 or 
                     delay 1.0;  
-                    exit when PacketSent; 
+                    exit when PacketIsSent; 
                 end select;
             end loop;   
         end PrintPackageFlow;
@@ -142,7 +97,7 @@ package body Graph is
                     countPackages := countPackages + 1;
                 end if;   
 
-                exit when PacketSent;
+                exit when PacketIsSent;
 
                 delay SenderDelay * GetRandomDelay; 
             end loop;
@@ -160,9 +115,9 @@ package body Graph is
                 end if;   
 
                 if countPackages = PackagesAmount then
-                    PacketSent := true;
+                    PacketIsSent := true;
                 end if;
-                exit when PacketSent; 
+                exit when PacketIsSent; 
 
                 delay RecipientDelay * GetRandomDelay;
             end loop;
@@ -195,7 +150,7 @@ package body Graph is
                         end if;
                     end loop;    
                 end if;
-                exit when PacketSent;
+                exit when PacketIsSent;
             end loop;
         end VerticesController;
 
@@ -203,7 +158,7 @@ package body Graph is
         Task Body ExcutionFinished is
         begin
             loop
-                if PacketSent then
+                if PacketIsSent then
                     New_Line;
                     Put_Line("Vertex Report");
                     for I in 0..VerticesAmount - 1 loop
@@ -238,8 +193,51 @@ package body Graph is
         Recipient : access CreateRecipient;
         Controller : array (0..VerticesAmount - 2) of access VerticesController;
         PrintResults : access ExcutionFinished;
+
     begin
-        BuildGraph(Vertices);
+
+        Vertices(VerticesAmount - 1).EdgesAmount := 0;
+
+        For I in 0..VerticesAmount-2 loop
+            Vertices(I).EdgesAmount := 1;
+            Vertices(I).Edges(0) := I + 1;
+        end loop;
+
+        while EdgesAmountCounter < AdditionalEdgesCount loop
+            reset(RandomEdgesGenerator);
+            WrongEdge   := false;
+            StartEdge   := Random(RandomEdgesGenerator);
+            FinishEdge  := Random(RandomEdgesGenerator);
+
+            If (StartEdge /= FinishEdge) then 
+                If (StartEdge > FinishEdge) then 
+                    Temporary   := StartEdge;
+                    StartEdge   := FinishEdge;
+                    FinishEdge  := Temporary;
+                end if;
+
+                for I in 0..Vertices(StartEdge).EdgesAmount - 1 loop
+                    if Vertices(StartEdge).Edges(I) = FinishEdge then 
+                        WrongEdge := true;
+                    end if;  
+                end loop;
+                If not WrongEdge then
+                    Vertices(StartEdge).Edges(Vertices(StartEdge).EdgesAmount) := FinishEdge;
+                    Vertices(StartEdge).EdgesAmount := Vertices(StartEdge).EdgesAmount + 1;
+                    EdgesAmountCounter := EdgesAmountCounter + 1;
+                end if;
+            end if;
+        end loop;
+
+        For I in 0..VerticesAmount - 1 loop
+            Put("Vertex:" & Integer'Image(I) & ". Connected to edges:");
+            For J in 0..Vertices(I).EdgesAmount - 1 loop
+                Put(Integer'Image(Vertices(I).Edges(J)));
+            end loop;
+            New_Line;
+        end loop;
+        New_Line;
+
         Sender := new CreateSender;
         Recipient := new CreateRecipient;
         for I in 0..VerticesAmount - 2 loop
