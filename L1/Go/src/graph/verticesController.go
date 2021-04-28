@@ -5,30 +5,48 @@ import
 	"math/rand"
 	"time"
 	"strconv"
+	"parameters"
+	"fmt"
 )
 
 func VerticesController(vertexId int) {
 	for !Finish {
-		if Vertices[vertexId].packageId != -1 {
-			next_vertex := Vertices[vertexId].edges[rand.Intn(len(Vertices[vertexId].edges))]
+		if Vertices[vertexId].isObtained {
+			nextVertex := Vertices[vertexId].edges[rand.Intn(len(Vertices[vertexId].edges))]
 			for {
-				if Vertices[next_vertex].packageId == -1 {
-					Vertices[next_vertex].packageId = Vertices[vertexId].packageId
+				if !Vertices[nextVertex].isObtained {
+					Vertices[nextVertex].packageId = Vertices[vertexId].packageId
 					Vertices[vertexId].packageId = -1
-					Vertices[next_vertex].packagesVisited = append(Vertices[next_vertex].packagesVisited, Vertices[next_vertex].packageId)
-					Packages[Vertices[next_vertex].packageId].verticesVisited = append(Packages[Vertices[next_vertex].packageId].verticesVisited, next_vertex)
 
-					msg := "Packet " + strconv.Itoa(Vertices[next_vertex].packageId) + " currently at vertex " + strconv.Itoa(next_vertex)
+					Vertices[nextVertex].packagesVisited = append(Vertices[nextVertex].packagesVisited, Vertices[nextVertex].packageId)
+					Packages[Vertices[nextVertex].packageId].verticesVisited = append(Packages[Vertices[nextVertex].packageId].verticesVisited, nextVertex)
+
+					Vertices[nextVertex].isObtained = true
+					Vertices[vertexId].isObtained = false
+
+					if Packages[Vertices[nextVertex].packageId].lifetime > parameters.PacketLifetime+1 {
+						msg := "Packet " + strconv.Itoa(Vertices[nextVertex].packageId) + " dead at vertex: " + strconv.Itoa(nextVertex) + " due to lifetime end."
+						Vertices[nextVertex].packageId = -1
+						Vertices[nextVertex].isObtained = false
+						Messages <- msg
+						parameters.PackagesAmount -= 1
+						break
+					}
+
+					msg := "Packet " + strconv.Itoa(Vertices[nextVertex].packageId) + " currently at vertex " + strconv.Itoa(nextVertex)
 					Messages <- msg
-					break;
+					fmt.Println(nextVertex, Vertices[nextVertex].packageId)
+					Packages[Vertices[nextVertex].packageId].lifetime += 1
+
+					break
 				} else {
-					time.Sleep(PackageDelay * time.Duration(rand.Intn(10)))
+					time.Sleep(parameters.PackageDelay * time.Duration(rand.Intn(10)))
 					continue
-				}
+				}	
 			}
 		}
-		time.Sleep(PackageDelay * time.Duration(rand.Intn(5)))
+		time.Sleep(parameters.PackageDelay * time.Duration(rand.Intn(5)))
 	}
-	time.Sleep(PackageDelay * time.Duration(5))
+	time.Sleep(parameters.PackageDelay * time.Duration(5))
 	defer waitGroup.Done()
 }

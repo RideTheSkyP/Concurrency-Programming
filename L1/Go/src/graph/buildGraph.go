@@ -4,22 +4,27 @@ import
 (
 	"fmt"
 	"math/rand"
+	"parameters"
 )
 
-func BuildGraph() [VerticesAmount]Vertex {
-	Vertices := [VerticesAmount]Vertex{}
-	for i := 0; i < VerticesAmount - 1; i++ {
-		Vertices[i].edges = append (Vertices[i].edges, i + 1)
+func BuildGraph() []Vertex {
+	Vertices := make([]Vertex, parameters.VerticesAmount)
+	
+	for i := 0; i < parameters.VerticesAmount - 1; i++ {
+		Vertices[i].edges = append(Vertices[i].edges, i + 1)
+		Vertices[i].isObtained = false
 		Vertices[i].packageId = -1
 	} 
 
-	Vertices[VerticesAmount-1].packageId = -1
+	Vertices[parameters.VerticesAmount-1].packageId = -1
+	Vertices[parameters.VerticesAmount-1].isObtained = false
 
 
-	for i:=0 ; i < AdditionalEdgesCount; i++ {
-		StartEdge := rand.Intn(VerticesAmount)
-		FinishEdge := rand.Intn(VerticesAmount)
+	for i := 0 ; i < parameters.AdditionalEdgesCount; i++ {
+		StartEdge := rand.Intn(parameters.VerticesAmount)
+		FinishEdge := rand.Intn(parameters.VerticesAmount)
 		wrongEdge := false
+
 		if StartEdge != FinishEdge {
 			if StartEdge > FinishEdge {
 				StartEdge, FinishEdge = FinishEdge, StartEdge
@@ -42,7 +47,7 @@ func BuildGraph() [VerticesAmount]Vertex {
 		}
 	}
 
-	for i := 0; i < VerticesAmount; i++ {
+	for i := 0; i < parameters.VerticesAmount; i++ {
 		fmt.Println("Vertex:", i, ". Connected to edges:", Vertices[i].edges)
 	}
 	fmt.Println()
