@@ -10,7 +10,7 @@ procedure Main is
 begin
 	ArgsAmount := Ada.Command_Line.Argument_Count;
 	IF ArgsAmount = 0 THEN
-		Put_Line("\nUsage is: ./main [amount of vertices] [additional edges amount] [packages amount]");
+		Put_Line("Usage is: ./main [amount of vertices] [additional edges amount] [packages amount] [lifetime] [additional reverse edges amount]");
 	ELSE
 		FOR Count IN 1..ArgsAmount LOOP
 			IF Count = 1 THEN
@@ -19,8 +19,12 @@ begin
 				Parameters.AdditionalEdgesCount := Integer'Value(Ada.Command_Line.Argument(Number => Count));
 			ELSIF Count = 3 THEN
 				Parameters.PackagesAmount := Integer'Value(Ada.Command_Line.Argument(Number => Count));
+			ELSIF Count = 4 THEN
+				Parameters.PacketLifetime := Integer'Value(Ada.Command_Line.Argument(Number => Count));
+			ELSIF Count = 5 THEN
+				Parameters.AdditionalReverseEdgesAmount := Integer'Value(Ada.Command_Line.Argument(Number => Count));
 			ELSE
-				Put_Line("\nUsage is: ./main [amount of vertices] [additional edges amount] [packages amount]");
+				Put_Line("Usage is: ./main [amount of vertices] [additional edges amount] [packages amount] [lifetime] [additional reverse edges amount]");
 				EXIT;
 			END IF;
 		END LOOP;

@@ -26,8 +26,8 @@ package body Graph is
             Edges           : Edges_array;
             EdgesAmount     : Integer;
             PackageId       : Integer := -1;
-            PackageAmount   : Integer := -1;
-            PackagesHistory : PHistory; 
+            VisitedVertices : Integer := -1;
+            PackagesVisited : PHistory;
         End record;
 
         Type Packet is record
@@ -37,47 +37,48 @@ package body Graph is
 
         Type VerticesHistory is array (0..VerticesAmount - 1) of Vertex;
         Type PackageHistory is array (0..PackagesAmount - 1) of Packet;
-        
-        subtype PossibleRangeOfEdges is Integer range 0..VerticesAmount - 1;
-        package GenerateRandomEdges is new Ada.Numerics.Discrete_Random(PossibleRangeOfEdges); 
-        use GenerateRandomEdges;
-        RandomEdgesGenerator : GenerateRandomEdges.Generator;
 
-        Vertices            : VerticesHistory;
-        Packages            : PackageHistory;
-        PacketIsSent          : Boolean := False;
-        EdgesAmountCounter  : Integer := 0;
-        StartEdge           : Integer;
-        FinishEdge          : Integer;
-        Temporary           : Integer;
-        WrongEdge           : Boolean := false;
+        subtype PossibleRangeOfEdges is Integer range 0..VerticesAmount - 1;
+        package GenerateRandomEdges is new Ada.Numerics.Discrete_Random(PossibleRangeOfEdges);
+        use GenerateRandomEdges;
+        RandomEdgesGenerator        : GenerateRandomEdges.Generator;
+
+        Vertices                    : VerticesHistory;
+        Packages                    : PackageHistory;
+        PacketIsSent                : Boolean := False;
+        EdgesAmountCounter          : Integer := 0;
+        ReverseEdgesAmountCounter   : Integer := 0;
+        StartEdge                   : Integer;
+        FinishEdge                  : Integer;
+        Temporary                   : Integer;
+        WrongEdge                   : Boolean := false;
 
         subtype VerticesRange is Positive;
-        package RandomVertices is new Ada.Numerics.Discrete_Random(VerticesRange); 
+        package RandomVertices is new Ada.Numerics.Discrete_Random(VerticesRange);
         use RandomVertices;
-        RandomVerticesGenerator : RandomVertices.Generator;         
+        RandomVerticesGenerator : RandomVertices.Generator;
 
         Task PrintPackageFlow is
             entry PrintForPackageInVertex(packageId : in Integer; vertexId : in Integer);
             entry PrintPackageReceived(packageId : in Integer);
-        end PrintPackageFlow; 
+        end PrintPackageFlow;
 
         Task Body PrintPackageFlow is
-        begin 
+        begin
             loop
                 select
                     accept PrintForPackageInVertex (packageId : in Integer; vertexId : in Integer) do
-                        Put_Line("Packet" & Integer'Image(packageId) & " currently at vertex" & Integer'Image(vertexId));   
-                    end PrintForPackageInVertex; 
-                or    
+                        Put_Line("Packet" & Integer'Image(packageId) & " currently at vertex" & Integer'Image(vertexId));
+                    end PrintForPackageInVertex;
+                or
                     accept PrintPackageReceived (packageId : in Integer) do
-                        Put_Line("Packet:" & Integer'Image(packageId) & " has been received.");   
-                    end PrintPackageReceived; 
-                or 
-                    delay 1.0;  
-                    exit when PacketIsSent; 
+                        Put_Line("Packet:" & Integer'Image(packageId) & " has been received.");
+                    end PrintPackageReceived;
+                or
+                    delay 1.0;
+                    exit when PacketIsSent;
                 end select;
-            end loop;   
+            end loop;
         end PrintPackageFlow;
 
         Task Type CreateSender;
@@ -87,8 +88,8 @@ package body Graph is
             loop
                 if Vertices(0).PackageId = -1 and countPackages < PackagesAmount then
                     Vertices(0).PackageId := countPackages;
-                    Vertices(0).PackageAmount := Vertices(0).PackageAmount + 1;
-                    Vertices(0).PackagesHistory(Vertices(0).PackageAmount) := countPackages;
+                    Vertices(0).VisitedVertices := Vertices(0).VisitedVertices + 1;
+                    Vertices(0).PackagesVisited(Vertices(0).VisitedVertices) := countPackages;
 
                     Packages(countPackages).AmountOfVisitedVertices := Packages(countPackages).AmountOfVisitedVertices + 1;
                     Packages(countPackages).VisitedVertices(Packages(countPackages).AmountOfVisitedVertices) := 0;
@@ -130,14 +131,15 @@ package body Graph is
         begin
             loop
                 delay PackageDelay * GetRandomDelay;
-                if Vertices(currentVertex).PackageId /= -1 then 
+                if Vertices(currentVertex).PackageId /= -1 then
                     reset(RandomVerticesGenerator);
                     nextVertex := Vertices(currentVertex).Edges(Random(RandomVerticesGenerator) mod Vertices(currentVertex).EdgesAmount);
                     loop
                         if Vertices(nextVertex).PackageId = -1 then
+
                             Vertices(nextVertex).PackageId := Vertices(currentVertex).PackageId;
-                            Vertices(nextVertex).PackageAmount := Vertices(nextVertex).PackageAmount + 1;
-                            Vertices(nextVertex).PackagesHistory(Vertices(nextVertex).PackageAmount) := Vertices(currentVertex).PackageId;
+                            Vertices(nextVertex).VisitedVertices := Vertices(nextVertex).VisitedVertices + 1;
+                            Vertices(nextVertex).PackagesVisited(Vertices(nextVertex).VisitedVertices) := Vertices(currentVertex).PackageId;
 
                             Packages(Vertices(nextVertex).PackageId).AmountOfVisitedVertices := Packages(Vertices(nextVertex).PackageId).AmountOfVisitedVertices + 1;
                             Packages(Vertices(nextVertex).PackageId).VisitedVertices(Packages(Vertices(nextVertex).PackageId).AmountOfVisitedVertices) := nextVertex;
@@ -148,7 +150,7 @@ package body Graph is
                         else
                             delay PackageDelay * GetRandomDelay;
                         end if;
-                    end loop;    
+                    end loop;
                 end if;
                 exit when PacketIsSent;
             end loop;
@@ -163,11 +165,11 @@ package body Graph is
                     Put_Line("Vertex Report");
                     for I in 0..VerticesAmount - 1 loop
                         Put("Vertex:" & Integer'Image(I) & ". Visited packages:");
-                        If Vertices(I).PackageAmount = -1 then
+                        If Vertices(I).VisitedVertices = -1 then
                             Put(" Not visited");
-                        else 
-                            For J in 0..Vertices(I).PackageAmount loop
-                            Put(Integer'Image(Vertices(I).PackagesHistory(J)));
+                        else
+                            For J in 0..Vertices(I).VisitedVertices loop
+                            Put(Integer'Image(Vertices(I).PackagesVisited(J)));
                             end loop;
                         end if;
                         New_Line;
@@ -186,7 +188,7 @@ package body Graph is
                 else
                     delay 3.0;
                 end if;
-            end loop;    
+            end loop;
         end ExcutionFinished;
 
         Sender : access CreateSender;
@@ -195,7 +197,6 @@ package body Graph is
         PrintResults : access ExcutionFinished;
 
     begin
-
         Vertices(VerticesAmount - 1).EdgesAmount := 0;
 
         For I in 0..VerticesAmount-2 loop
@@ -217,14 +218,40 @@ package body Graph is
                 end if;
 
                 for I in 0..Vertices(StartEdge).EdgesAmount - 1 loop
-                    if Vertices(StartEdge).Edges(I) = FinishEdge then 
+                    if Vertices(StartEdge).Edges(I) = FinishEdge then
                         WrongEdge := true;
-                    end if;  
+                    end if;
                 end loop;
                 If not WrongEdge then
                     Vertices(StartEdge).Edges(Vertices(StartEdge).EdgesAmount) := FinishEdge;
                     Vertices(StartEdge).EdgesAmount := Vertices(StartEdge).EdgesAmount + 1;
                     EdgesAmountCounter := EdgesAmountCounter + 1;
+                end if;
+            end if;
+        end loop;
+
+        while ReverseEdgesAmountCounter < AdditionalReverseEdgesAmount loop
+            reset(RandomEdgesGenerator);
+            WrongEdge   := false;
+            StartEdge   := Random(RandomEdgesGenerator);
+            FinishEdge  := Random(RandomEdgesGenerator);
+
+            If (StartEdge /= FinishEdge) then 
+                If (StartEdge < FinishEdge) then 
+                    Temporary   := StartEdge;
+                    StartEdge   := FinishEdge;
+                    FinishEdge  := Temporary;
+                end if;
+
+                for I in 0..Vertices(StartEdge).EdgesAmount - 1 loop
+                    if Vertices(StartEdge).Edges(I) = FinishEdge then
+                        WrongEdge := true;
+                    end if;
+                end loop;
+                If not WrongEdge then
+                    Vertices(StartEdge).Edges(Vertices(StartEdge).EdgesAmount) := FinishEdge;
+                    Vertices(StartEdge).EdgesAmount := Vertices(StartEdge).EdgesAmount + 1;
+                    ReverseEdgesAmountCounter := ReverseEdgesAmountCounter + 1;
                 end if;
             end if;
         end loop;
