@@ -6,7 +6,7 @@ import
 	"time"
 	"strconv"
 	"parameters"
-	"fmt"
+
 )
 
 func VerticesController(vertexId int) {
@@ -15,21 +15,21 @@ func VerticesController(vertexId int) {
 			nextVertex := Vertices[vertexId].edges[rand.Intn(len(Vertices[vertexId].edges))]
 			for {
 				if !Vertices[nextVertex].isObtained {
-
 					Vertices[nextVertex].packageId = Vertices[vertexId].packageId
-					Vertices[nextVertex].packagesVisited = append(Vertices[nextVertex].packagesVisited, Vertices[nextVertex].packageId)
-					Packages[Vertices[nextVertex].packageId].verticesVisited = append(Packages[Vertices[nextVertex].packageId].verticesVisited, nextVertex)
-					Packages[Vertices[nextVertex].packageId].lifetime++
+					Packages[Vertices[vertexId].packageId].lifetime++
 
 					if Packages[Vertices[vertexId].packageId].lifetime > parameters.PacketLifetime {
 						msg := "Packet " + strconv.Itoa(Vertices[vertexId].packageId) + " dead at vertex: " + strconv.Itoa(vertexId) + ", due to lifetime end."
 						Vertices[nextVertex].packageId = -1
 						Vertices[nextVertex].isObtained = false
 						Messages <- msg
+						Vertices[vertexId].packageId = -1
 						parameters.PackagesAmount--
 						break
 					}
 
+					Vertices[nextVertex].packagesVisited = append(Vertices[nextVertex].packagesVisited, Vertices[nextVertex].packageId)
+					Packages[Vertices[nextVertex].packageId].verticesVisited = append(Packages[Vertices[nextVertex].packageId].verticesVisited, nextVertex)
 					Vertices[vertexId].packageId = -1
 					Vertices[nextVertex].isObtained = true
 					Vertices[vertexId].isObtained = false

@@ -50,11 +50,11 @@ func InitializeGraph() {
 
 	fmt.Println("\nVertex Report")
 	for i:= 0; i < VerticesAmount; i++ {
-		fmt.Println("Vertex: ", i, ". Visited packages: ", Vertices[i].packagesVisited)
+		fmt.Println("Vertex: ", i, ". Visited packages:", Vertices[i].packagesVisited)
 	}
 
 	fmt.Println("\nPackages Report")
 	for i:= 0; i < PackagesAmount; i++ {
-		fmt.Println("Packet: ", i, ". Visited vertices: ", Packages[i].verticesVisited)
+		fmt.Println("Packet: ", i, ". Visited vertices:", Packages[i].verticesVisited)
 	}
 }
