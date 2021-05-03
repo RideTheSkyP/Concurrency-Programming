@@ -19,14 +19,43 @@ func BuildGraph() []Vertex {
 	Vertices[parameters.VerticesAmount-1].packageId = -1
 	Vertices[parameters.VerticesAmount-1].isObtained = false
 
+	addEdges := parameters.AdditionalEdgesAmount
+	reverseAddEdges := parameters.AdditionalReverseEdgesAmount
 
-	for i := 0 ; i < parameters.AdditionalEdgesCount; i++ {
+	for i := 0 ; i < addEdges; i++ {
 		StartEdge := rand.Intn(parameters.VerticesAmount)
 		FinishEdge := rand.Intn(parameters.VerticesAmount)
 		wrongEdge := false
 
 		if StartEdge != FinishEdge {
 			if StartEdge > FinishEdge {
+				StartEdge, FinishEdge = FinishEdge, StartEdge
+			}
+
+			for _, z := range Vertices[StartEdge].edges {
+				if z == FinishEdge {
+					wrongEdge = true
+				}
+			}
+
+			if wrongEdge {
+				i--
+			} else {
+				Vertices[StartEdge].edges = append(Vertices[StartEdge].edges, FinishEdge)
+			}
+
+		} else {
+			i--
+		}
+	}
+
+	for i := 0 ; i < reverseAddEdges; i++ {
+		StartEdge := rand.Intn(parameters.VerticesAmount)
+		FinishEdge := rand.Intn(parameters.VerticesAmount)
+		wrongEdge := false
+
+		if StartEdge != FinishEdge {
+			if StartEdge < FinishEdge {
 				StartEdge, FinishEdge = FinishEdge, StartEdge
 			}
 

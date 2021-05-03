@@ -1,13 +1,13 @@
 package graph
 
-import 
+import
 (
 	"fmt"
 	"sync"
 	"parameters"
 )
 
-type Vertex struct 
+type Vertex struct
 {
 	edges []int
 	packageId int
@@ -15,7 +15,7 @@ type Vertex struct
 	isObtained bool
 }
 
-type Packet struct 
+type Packet struct
 {
 	verticesVisited []int
 	lifetime int
@@ -29,8 +29,12 @@ var (
 	waitGroup sync.WaitGroup
 )
 
-func InitializeGraph(){	
+func InitializeGraph() {
 	Vertices = BuildGraph()
+
+	VerticesAmount := parameters.VerticesAmount
+	PackagesAmount := parameters.PackagesAmount
+
 	go PrintResults()
 
 	go Sender()
@@ -44,13 +48,13 @@ func InitializeGraph(){
 	
 	waitGroup.Wait()
 
-	fmt.Println("\nVertex Report");
-	for i:= 0; i < parameters.VerticesAmount; i++ {
+	fmt.Println("\nVertex Report")
+	for i:= 0; i < VerticesAmount; i++ {
 		fmt.Println("Vertex: ", i, ". Visited packages: ", Vertices[i].packagesVisited)
 	}
 
-	fmt.Println("\nPackages Report");
-	for i:= 0; i < parameters.PackagesAmount; i++ {
+	fmt.Println("\nPackages Report")
+	for i:= 0; i < PackagesAmount; i++ {
 		fmt.Println("Packet: ", i, ". Visited vertices: ", Packages[i].verticesVisited)
 	}
 }
