@@ -26,13 +26,14 @@ package body Graph is
             Edges           : Edges_array;
             EdgesAmount     : Integer;
             PackageId       : Integer := -1;
-            VisitedVertices : Integer := -1;
+            VerticesVisited : Integer := -1;
             PackagesVisited : PHistory;
         End record;
 
         Type Packet is record
-                VisitedVertices         : VHistory;
+                VerticesVisited         : VHistory;
                 AmountOfVisitedVertices : Integer := -1;
+                Lifetime                : Integer := 0;
         End record;
 
         Type VerticesHistory is array (0..VerticesAmount - 1) of Vertex;
@@ -61,6 +62,7 @@ package body Graph is
         Task PrintPackageFlow is
             entry PrintForPackageInVertex(packageId : in Integer; vertexId : in Integer);
             entry PrintPackageReceived(packageId : in Integer);
+            entry PrintPackageDead(packageId : in Integer; vertexId : in Integer);
         end PrintPackageFlow;
 
         Task Body PrintPackageFlow is
@@ -72,8 +74,12 @@ package body Graph is
                     end PrintForPackageInVertex;
                 or
                     accept PrintPackageReceived (packageId : in Integer) do
-                        Put_Line("Packet:" & Integer'Image(packageId) & " has been received.");
+                        Put_Line("Packet" & Integer'Image(packageId) & " has been received.");
                     end PrintPackageReceived;
+                or
+                    accept PrintPackageDead (packageId : in Integer; vertexId : in Integer) do
+                        Put_Line("Packet" & Integer'Image(packageId) & " dead at vertex " & Integer'Image(vertexId));
+                    end PrintPackageDead;
                 or
                     delay 1.0;
                     exit when PacketIsSent;
@@ -88,19 +94,19 @@ package body Graph is
             loop
                 if Vertices(0).PackageId = -1 and countPackages < PackagesAmount then
                     Vertices(0).PackageId := countPackages;
-                    Vertices(0).VisitedVertices := Vertices(0).VisitedVertices + 1;
-                    Vertices(0).PackagesVisited(Vertices(0).VisitedVertices) := countPackages;
+                    Vertices(0).VerticesVisited := Vertices(0).VerticesVisited + 1;
+                    Vertices(0).PackagesVisited(Vertices(0).VerticesVisited) := countPackages;
 
                     Packages(countPackages).AmountOfVisitedVertices := Packages(countPackages).AmountOfVisitedVertices + 1;
-                    Packages(countPackages).VisitedVertices(Packages(countPackages).AmountOfVisitedVertices) := 0;
+                    Packages(countPackages).VerticesVisited(Packages(countPackages).AmountOfVisitedVertices) := 0;
 
                     PrintPackageFlow.PrintForPackageInVertex(countPackages, 0);
                     countPackages := countPackages + 1;
-                end if;   
+                end if;
 
                 exit when PacketIsSent;
 
-                delay SenderDelay * GetRandomDelay; 
+                delay SenderDelay * GetRandomDelay;
             end loop;
         end CreateSender;
 
@@ -113,12 +119,12 @@ package body Graph is
                     PrintPackageFlow.PrintPackageReceived(Vertices(VerticesAmount-1).PackageId);
                     Vertices(VerticesAmount - 1).PackageId := -1;
                     countPackages := countPackages + 1;
-                end if;   
+                end if;
 
                 if countPackages = PackagesAmount then
                     PacketIsSent := true;
                 end if;
-                exit when PacketIsSent; 
+                exit when PacketIsSent;
 
                 delay RecipientDelay * GetRandomDelay;
             end loop;
@@ -138,15 +144,24 @@ package body Graph is
                         if Vertices(nextVertex).PackageId = -1 then
 
                             Vertices(nextVertex).PackageId := Vertices(currentVertex).PackageId;
-                            Vertices(nextVertex).VisitedVertices := Vertices(nextVertex).VisitedVertices + 1;
-                            Vertices(nextVertex).PackagesVisited(Vertices(nextVertex).VisitedVertices) := Vertices(currentVertex).PackageId;
+                            Packages(Vertices(currentVertex).PackageId).Lifetime := Packages(Vertices(nextVertex).PackageId).Lifetime + 1;
 
+                            if Packages(Vertices(currentVertex).PackageId).Lifetime = PacketLifetime + 1 then
+                                Vertices(nextVertex).PackageId := -1;
+                                PrintPackageFlow.PrintPackageDead(Vertices(currentVertex).PackageId, currentVertex);
+                                Vertices(currentVertex).PackageId := -1;
+                                PackagesAmount := PackagesAmount - 1;
+                                exit;
+                            end if;
+
+                            Vertices(nextVertex).VerticesVisited := Vertices(nextVertex).VerticesVisited + 1;
+                            Vertices(nextVertex).PackagesVisited(Vertices(nextVertex).VerticesVisited) := Vertices(currentVertex).PackageId;
                             Packages(Vertices(nextVertex).PackageId).AmountOfVisitedVertices := Packages(Vertices(nextVertex).PackageId).AmountOfVisitedVertices + 1;
-                            Packages(Vertices(nextVertex).PackageId).VisitedVertices(Packages(Vertices(nextVertex).PackageId).AmountOfVisitedVertices) := nextVertex;
-
+                            Packages(Vertices(nextVertex).PackageId).VerticesVisited(Packages(Vertices(nextVertex).PackageId).AmountOfVisitedVertices) := nextVertex;
                             Vertices(currentVertex).PackageId := -1;
                             PrintPackageFlow.PrintForPackageInVertex(Vertices(nextVertex).PackageId, nextVertex);
                             exit;
+                            
                         else
                             delay PackageDelay * GetRandomDelay;
                         end if;
@@ -156,19 +171,21 @@ package body Graph is
             end loop;
         end VerticesController;
 
-        Task Type ExcutionFinished;
+        Task Type ExcutionFinished(VA : Integer; PA : Integer);
         Task Body ExcutionFinished is
+            V   : Integer := VA;
+            P   : Integer := PA;
         begin
             loop
                 if PacketIsSent then
                     New_Line;
                     Put_Line("Vertex Report");
-                    for I in 0..VerticesAmount - 1 loop
+                    for I in 0..VA - 1 loop
                         Put("Vertex:" & Integer'Image(I) & ". Visited packages:");
-                        If Vertices(I).VisitedVertices = -1 then
+                        If Vertices(I).VerticesVisited = -1 then
                             Put(" Not visited");
                         else
-                            For J in 0..Vertices(I).VisitedVertices loop
+                            For J in 0..Vertices(I).VerticesVisited loop
                             Put(Integer'Image(Vertices(I).PackagesVisited(J)));
                             end loop;
                         end if;
@@ -177,10 +194,10 @@ package body Graph is
 
                     New_Line;
                     Put_Line("Packages Report");
-                    for I in 0..PackagesAmount - 1 loop
+                    for I in 0..PA - 1 loop
                         Put("Package:" & Integer'Image(I) & ". Visited vertices:");
                         For J in 0..Packages(I).AmountOfVisitedVertices loop
-                            Put(Integer'Image(Packages(I).VisitedVertices(J)));
+                            Put(Integer'Image(Packages(I).VerticesVisited(J)));
                         end loop;
                         New_Line;
                     end loop;
@@ -191,13 +208,18 @@ package body Graph is
             end loop;
         end ExcutionFinished;
 
-        Sender : access CreateSender;
-        Recipient : access CreateRecipient;
-        Controller : array (0..VerticesAmount - 2) of access VerticesController;
-        PrintResults : access ExcutionFinished;
+        Sender          : access CreateSender;
+        Recipient       : access CreateRecipient;
+        Controller      : array (0..VerticesAmount - 2) of access VerticesController;
+        PrintResults    : access ExcutionFinished;
+        VA              : Integer;
+        PA              : Integer;
 
     begin
         Vertices(VerticesAmount - 1).EdgesAmount := 0;
+
+        VA := VerticesAmount;
+        PA := PackagesAmount;
 
         For I in 0..VerticesAmount-2 loop
             Vertices(I).EdgesAmount := 1;
@@ -270,6 +292,6 @@ package body Graph is
         for I in 0..VerticesAmount - 2 loop
             Controller(I) := new VerticesController(I);
         end loop;
-        PrintResults := new ExcutionFinished;
+        PrintResults := new ExcutionFinished(VA, PA);
     end Start;
 end Graph;
