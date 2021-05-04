@@ -13,6 +13,7 @@ type Vertex struct
 	packageId int
 	packagesVisited []int
 	isObtained bool
+	isPoached bool
 }
 
 type Packet struct
@@ -41,11 +42,13 @@ func InitializeGraph() {
 	waitGroup.Add(1)
 	go Recipient()
 	waitGroup.Add(1)
+	go Poacher()
+	waitGroup.Add(1)
 	for i:=0 ; i < parameters.VerticesAmount - 1; i++ {
 		waitGroup.Add(1)
 		go VerticesController(i)
 	}
-	
+
 	waitGroup.Wait()
 
 	fmt.Println("\nVertex Report")

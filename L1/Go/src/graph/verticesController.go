@@ -15,19 +15,29 @@ func VerticesController(vertexId int) {
 			nextVertex := Vertices[vertexId].edges[rand.Intn(len(Vertices[vertexId].edges))]
 			for {
 				if !Vertices[nextVertex].isObtained {
-					Vertices[nextVertex].packageId = Vertices[vertexId].packageId
+					
 					Packages[Vertices[vertexId].packageId].lifetime++
 
 					if Packages[Vertices[vertexId].packageId].lifetime > parameters.PacketLifetime {
-						msg := "Packet " + strconv.Itoa(Vertices[vertexId].packageId) + " dead at vertex: " + strconv.Itoa(vertexId) + ", due to lifetime end."
-						Vertices[nextVertex].packageId = -1
-						Vertices[nextVertex].isObtained = false
+						msg := "Packet " + strconv.Itoa(Vertices[vertexId].packageId) + " dead at vertex " + strconv.Itoa(vertexId) + ", due to lifetime end."
+						Vertices[vertexId].isObtained = false
 						Messages <- msg
 						Vertices[vertexId].packageId = -1
 						parameters.PackagesAmount--
 						break
 					}
 
+					if Vertices[vertexId].isPoached {
+						msg := "Packet " + strconv.Itoa(Vertices[vertexId].packageId) + " got stolen at vertex " + strconv.Itoa(vertexId)
+						Vertices[vertexId].isPoached = false
+						Vertices[vertexId].isObtained = false
+						Messages <- msg
+						Vertices[vertexId].packageId = -1
+						parameters.PackagesAmount--
+						break
+					}
+
+					Vertices[nextVertex].packageId = Vertices[vertexId].packageId
 					Vertices[nextVertex].packagesVisited = append(Vertices[nextVertex].packagesVisited, Vertices[nextVertex].packageId)
 					Packages[Vertices[nextVertex].packageId].verticesVisited = append(Packages[Vertices[nextVertex].packageId].verticesVisited, nextVertex)
 					Vertices[vertexId].packageId = -1

@@ -14,10 +14,12 @@ func BuildGraph() []Vertex {
 		Vertices[i].edges = append(Vertices[i].edges, i + 1)
 		Vertices[i].isObtained = false
 		Vertices[i].packageId = -1
+		Vertices[i].isPoached = false
 	} 
 
 	Vertices[parameters.VerticesAmount-1].packageId = -1
 	Vertices[parameters.VerticesAmount-1].isObtained = false
+	Vertices[parameters.VerticesAmount-1].isPoached = false
 
 	addEdges := parameters.AdditionalEdgesAmount
 	reverseAddEdges := parameters.AdditionalReverseEdgesAmount
