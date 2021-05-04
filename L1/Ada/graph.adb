@@ -18,7 +18,7 @@ package body Graph is
 
 
     procedure Start is
-        Type Edges_array is array (0 .. AdditionalEdgesCount + 2) of Integer;
+        Type Edges_array is array (0..AdditionalEdgesCount + 2) of Integer;
         Type PHistory is array (0..PackagesAmount) of Integer;
         Type VHistory is array (0..VerticesAmount) of Integer;
 
@@ -28,12 +28,13 @@ package body Graph is
             PackageId       : Integer := -1;
             VerticesVisited : Integer := -1;
             PackagesVisited : PHistory;
+            isPoached       : Boolean := false;
         End record;
 
         Type Packet is record
-                VerticesVisited         : VHistory;
-                AmountOfVisitedVertices : Integer := -1;
-                Lifetime                : Integer := 0;
+            VerticesVisited         : VHistory;
+            AmountOfVisitedVertices : Integer := -1;
+            Lifetime                : Integer := 0;
         End record;
 
         Type VerticesHistory is array (0..VerticesAmount - 1) of Vertex;
@@ -63,6 +64,8 @@ package body Graph is
             entry PrintForPackageInVertex(packageId : in Integer; vertexId : in Integer);
             entry PrintPackageReceived(packageId : in Integer);
             entry PrintPackageDead(packageId : in Integer; vertexId : in Integer);
+            entry PrintPackageStolen(packageId : in Integer; vertexId : in Integer);
+            entry PrintPoacherAtVertex(vertexId : in Integer);
         end PrintPackageFlow;
 
         Task Body PrintPackageFlow is
@@ -80,6 +83,14 @@ package body Graph is
                     accept PrintPackageDead (packageId : in Integer; vertexId : in Integer) do
                         Put_Line("Packet" & Integer'Image(packageId) & " dead at vertex " & Integer'Image(vertexId));
                     end PrintPackageDead;
+                or
+                    accept PrintPackageStolen (packageId : in Integer; vertexId : in Integer) do
+                        Put_Line("Packet" & Integer'Image(packageId) & " has been stolen at vertex " & Integer'Image(vertexId));
+                    end PrintPackageStolen;
+                or
+                    accept PrintPoacherAtVertex (vertexId : in Integer) do
+                        Put_Line("Poacher set at vertex" & Integer'Image(vertexId));
+                    end PrintPoacherAtVertex;
                 or
                     delay 1.0;
                     exit when PacketIsSent;
@@ -130,6 +141,28 @@ package body Graph is
             end loop;
         end CreateRecipient;
 
+        Task Type CreatePoacher;
+        Task Body CreatePoacher is
+            subtype PossibleRangeOfVertices is Integer range 1..VerticesAmount - 1;
+            package GenerateRandomVertex is new Ada.Numerics.Discrete_Random(PossibleRangeOfVertices);
+            use GenerateRandomVertex;
+            RandomVertexGenerator   : GenerateRandomVertex.Generator;
+            RandomVertex            : Integer := 1;
+        begin
+            loop
+                if not PacketIsSent then
+                    reset(RandomVertexGenerator);
+                    RandomVertex := Random(RandomVertexGenerator);
+                    PrintPackageFlow.PrintPoacherAtVertex(RandomVertex);
+                    Vertices(RandomVertex).isPoached := true;
+                end if;
+
+                exit when PacketIsSent;
+
+                delay PoacherDelay * GetRandomDelay;    
+            end loop;
+        end CreatePoacher;
+
         Task Type VerticesController(vertexId : Integer);
         Task Body VerticesController is
             currentVertex   : Integer := vertexId;
@@ -154,6 +187,15 @@ package body Graph is
                                 exit;
                             end if;
 
+                            if Vertices(currentVertex).isPoached then
+                                Vertices(nextVertex).PackageId := -1;
+                                Vertices(currentVertex).isPoached := false;
+                                PrintPackageFlow.PrintPackageStolen(Vertices(currentVertex).PackageId, currentVertex);
+                                Vertices(currentVertex).packageId := -1;
+                                PackagesAmount := PackagesAmount - 1;
+                                exit;
+                            end if;
+
                             Vertices(nextVertex).VerticesVisited := Vertices(nextVertex).VerticesVisited + 1;
                             Vertices(nextVertex).PackagesVisited(Vertices(nextVertex).VerticesVisited) := Vertices(currentVertex).PackageId;
                             Packages(Vertices(nextVertex).PackageId).AmountOfVisitedVertices := Packages(Vertices(nextVertex).PackageId).AmountOfVisitedVertices + 1;
@@ -171,8 +213,8 @@ package body Graph is
             end loop;
         end VerticesController;
 
-        Task Type ExcutionFinished(VA : Integer; PA : Integer);
-        Task Body ExcutionFinished is
+        Task Type ExecutionFinished(VA : Integer; PA : Integer);
+        Task Body ExecutionFinished is
             V   : Integer := VA;
             P   : Integer := PA;
         begin
@@ -206,12 +248,13 @@ package body Graph is
                     delay 3.0;
                 end if;
             end loop;
-        end ExcutionFinished;
+        end ExecutionFinished;
 
         Sender          : access CreateSender;
         Recipient       : access CreateRecipient;
+        Poacher         : access CreatePoacher;
         Controller      : array (0..VerticesAmount - 2) of access VerticesController;
-        PrintResults    : access ExcutionFinished;
+        PrintResults    : access ExecutionFinished;
         VA              : Integer;
         PA              : Integer;
 
@@ -287,11 +330,12 @@ package body Graph is
         end loop;
         New_Line;
 
-        Sender := new CreateSender;
-        Recipient := new CreateRecipient;
+        Sender      := new CreateSender;
+        Recipient   := new CreateRecipient;
+        Poacher     := new CreatePoacher;
         for I in 0..VerticesAmount - 2 loop
             Controller(I) := new VerticesController(I);
         end loop;
-        PrintResults := new ExcutionFinished(VA, PA);
+        PrintResults := new ExecutionFinished(VA, PA);
     end Start;
 end Graph;

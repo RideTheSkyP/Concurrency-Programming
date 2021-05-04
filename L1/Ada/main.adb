@@ -30,7 +30,9 @@ begin
 		END LOOP;
 		Put("Building graph with" &  Integer'Image(Parameters.VerticesAmount));
 		Put(" vertices," & Integer'Image(Parameters.AdditionalEdgesCount));
-		Put_Line(" additional edges and" & Integer'Image(Parameters.PackagesAmount) & " packages");
+		Put(" additional edges and" & Integer'Image(Parameters.PackagesAmount) & " packages. ");
+		Put("Lifetime " & Integer'Image(Parameters.PacketLifetime));
+		Put_Line(" additional reverse edges amount " & Integer'Image(Parameters.AdditionalReverseEdgesAmount));
     	Start;
 	END IF;
     
