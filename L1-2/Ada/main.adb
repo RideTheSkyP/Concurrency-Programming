@@ -28,12 +28,17 @@ begin
 				EXIT;
 			END IF;
 		END LOOP;
-		Put("Building graph with" &  Integer'Image(Parameters.VerticesAmount));
-		Put(" vertices," & Integer'Image(Parameters.AdditionalEdgesCount));
-		Put(" additional edges and" & Integer'Image(Parameters.PackagesAmount) & " packages. ");
-		Put("Lifetime " & Integer'Image(Parameters.PacketLifetime));
-		Put_Line(" additional reverse edges amount " & Integer'Image(Parameters.AdditionalReverseEdgesAmount));
-    	Start;
+
+		IF (Parameters.AdditionalEdgesCount + Parameters.AdditionalReverseEdgesAmount) + (Parameters.VerticesAmount - 1) >= Parameters.VerticesAmount * (Parameters.VerticesAmount - 1) / 2 THEN
+			Put_Line("Not appropriate amount of additional edges given");
+		ELSE
+			Put("Building graph with" &  Integer'Image(Parameters.VerticesAmount));
+			Put(" vertices," & Integer'Image(Parameters.AdditionalEdgesCount));
+			Put(" additional edges and" & Integer'Image(Parameters.PackagesAmount) & " packages. ");
+			Put("Lifetime " & Integer'Image(Parameters.PacketLifetime));
+			Put_Line(" additional reverse edges amount " & Integer'Image(Parameters.AdditionalReverseEdgesAmount));
+	    	Start;
+		END IF;
 	END IF;
     
 end Main;

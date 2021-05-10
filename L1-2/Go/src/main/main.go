@@ -21,7 +21,7 @@ func main() {
 	if err1 != nil || err2 != nil || err3 != nil || err4 != nil || err5 != nil{ 
 		fmt.Println("Usage is: ./main [amount of vertices] [additional edges amount] [packages amount] [lifetime] [additional reverse edges amount]")
 	} else {
-		if num2+(num1-1) >= num1*(num1-1)/2 || num5+(num1-1) >= num1*(num1-1)/2{
+		if (num2+num5)+(num1-1) >= num1*(num1-1)/2 {
 			fmt.Println("Not appropriate amount of additional edges given")
 		} else {
 			parameters.VerticesAmount = num1
